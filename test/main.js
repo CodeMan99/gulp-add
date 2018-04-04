@@ -87,6 +87,34 @@ describe('gulp-add', function() {
             ['newfile1.txt', 'hello world3']
         );
 
+        testAdd(
+            'single new file with buffer content',
+            add('newfile1.txt', Buffer.from('hello world4')),
+            ['test/oldfile1.txt'],
+            [
+                'test/oldfile1.txt', 'oldfile1',
+                'newfile1.txt', 'hello world4'
+            ]
+        );
+
+        testAdd(
+            'two new files with buffer content',
+            add({
+            	'newfile1.txt': Buffer.from('hello world5'),
+            	'newfile2.txt': Buffer.from('hello world6')
+            }),
+            [
+                'test/oldfile1.txt',
+                'test/oldfile2.txt'
+            ],
+            [
+                'test/oldfile1.txt', 'oldfile1',
+                'test/oldfile2.txt', 'oldfile2',
+                'newfile1.txt', 'hello world5',
+                'newfile2.txt', 'hello world6'
+            ]
+        );
+
         function testAdd(name, stream, files, results) {
             it(name, function(done) {
                 stream.on('data', function (file) {
