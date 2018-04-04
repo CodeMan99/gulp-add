@@ -1,5 +1,6 @@
 var add = require('..');
 var should = require('should');
+var normalize = require('normalize-path');
 var path = require('path');
 var File = require('vinyl');
 var fs = require('fs');
@@ -89,8 +90,8 @@ describe('gulp-add', function() {
         function testAdd(name, stream, files, results) {
             it(name, function(done) {
                 stream.on('data', function (file) {
-                    var expectedFilename = results.shift(),
-                        expectedHead = results.shift();
+                    var expectedFilename = results.shift();
+                    var expectedHead = results.shift();
 
                     should.exist(file);
                     should.exist(file.relative);
@@ -98,9 +99,8 @@ describe('gulp-add', function() {
                     should.exist(expectedFilename);
                     should.exist(expectedHead);
 
-                    var retFilename = path.resolve(file.path);
-                    retFilename.should.equal(path.resolve(expectedFilename));
-                    file.relative.should.equal(expectedFilename);
+                    normalize(file.path).should.equal(expectedFilename);
+                    normalize(file.relative).should.equal(expectedFilename);
 
                     Buffer.isBuffer(file.contents).should.equal(true);
                     file.contents.toString().substring(0, expectedHead.length).should.equal(expectedHead);
@@ -112,7 +112,6 @@ describe('gulp-add', function() {
                 });
 
                 files.forEach(function (filename) {
-                    filename = path.resolve(filename);
                     stream.write(new File({
                         path: filename,
                         contents: fs.readFileSync(filename)
