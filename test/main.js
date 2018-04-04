@@ -149,6 +149,58 @@ describe('gulp-add', function() {
             ]
         );
 
+        testAdd(
+            'mode option',
+            add('mode.txt', 'read & write', {mode: 0o666}),
+            [],
+	         ['mode.txt', {mode: 0o666}]
+        );
+
+        testAdd(
+            'stat option',
+            add('stat.txt', 'four', {
+                stat: {
+                    gid: 1001
+                }
+            }),
+            [],
+	         ['stat.txt', {gid: 1001, size: 4}]
+        );
+
+        testAdd(
+            'before option',
+            add('first.txt', 'First!', {before: true}),
+            [
+                'test/oldfile2.txt',
+                'test/oldfile1.txt'
+            ],
+            [
+                'first.txt', 'First!',
+                'test/oldfile2.txt', 'oldfile2',
+                'test/oldfile1.txt', 'oldfile1'
+            ]
+        );
+
+        testAdd(
+            'before option with multiple new files',
+            add({
+                'first.txt': 'first baby',
+                'second.txt': 'almost first'
+            }, {
+                before: true
+            }),
+            [
+                'test/oldfile2.txt',
+                'test/oldfile1.txt'
+            ],
+            [
+                'first.txt', 'first baby',
+                'second.txt', 'almost first',
+                'test/oldfile2.txt', 'oldfile2',
+                'test/oldfile1.txt', 'oldfile1'
+            ]
+        );
+
         function testAdd(name, stream, files, results) {
             it(name, function(done) {
                 var checkDone = function() {
@@ -171,7 +223,11 @@ describe('gulp-add', function() {
                     normalize(file.path).should.equal(expectedFilename);
                     normalize(file.relative).should.equal(expectedFilename);
 
-                    if (file.isStream()) {
+                    if (typeof expectedHead === 'object') {
+                        for (var key in expectedHead) {
+                            expectedHead[key].should.equal(file.stat[key]);
+                        }
+                    } else if (file.isStream()) {
                         file.contents.pipe(concat(function(contents) {
                             contents.toString().substring(0, expectedHead.length).should.equal(expectedHead);
                             checkDone();
