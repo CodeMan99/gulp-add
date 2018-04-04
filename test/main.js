@@ -1,4 +1,6 @@
 var add = require('..');
+var concat = require('concat-stream');
+var intoStream = require('into-stream');
 var should = require('should');
 var normalize = require('normalize-path');
 var path = require('path');
@@ -115,8 +117,47 @@ describe('gulp-add', function() {
             ]
         );
 
+        testAdd(
+            'single new file with stream content',
+            add('stream.txt', intoStream('hello stream')),
+            [
+                'test/oldfile1.txt',
+                'test/oldfile2.txt'
+            ],
+            [
+                'test/oldfile1.txt', 'oldfile1',
+                'test/oldfile2.txt', 'oldfile2',
+                'stream.txt', 'hello stream'
+            ]
+        );
+
+        testAdd(
+            'multiple new files with stream content',
+            add({
+                 'stream1.txt': intoStream('hello stream1'),
+                 'stream2.txt': intoStream('hello stream2')
+            }),
+            [
+                'test/oldfile1.txt',
+                'test/oldfile2.txt'
+            ],
+            [
+                'test/oldfile1.txt', 'oldfile1',
+                'test/oldfile2.txt', 'oldfile2',
+                'stream1.txt', 'hello stream1',
+                'stream2.txt', 'hello stream2'
+            ]
+        );
+
         function testAdd(name, stream, files, results) {
             it(name, function(done) {
+                var checkDone = function() {
+                    if (results && !results.length) {
+                        results = null;
+                        done();
+                    }
+                };
+
                 stream.on('data', function (file) {
                     var expectedFilename = results.shift();
                     var expectedHead = results.shift();
@@ -130,13 +171,18 @@ describe('gulp-add', function() {
                     normalize(file.path).should.equal(expectedFilename);
                     normalize(file.relative).should.equal(expectedFilename);
 
-                    Buffer.isBuffer(file.contents).should.equal(true);
-                    file.contents.toString().substring(0, expectedHead.length).should.equal(expectedHead);
-
-                    if (results && !results.length) {
-                        results = null;
-                        done();
+                    if (file.isStream()) {
+                        file.contents.pipe(concat(function(contents) {
+                            contents.toString().substring(0, expectedHead.length).should.equal(expectedHead);
+                            checkDone();
+                        }));
+                        return;
+                    } else if (file.isBuffer()) {
+                        Buffer.isBuffer(file.contents).should.equal(true);
+                        file.contents.toString().substring(0, expectedHead.length).should.equal(expectedHead);
                     }
+
+                    checkDone();
                 });
 
                 files.forEach(function (filename) {
