@@ -1,8 +1,7 @@
-var add = require('../');
+var add = require('..');
 var should = require('should');
 var path = require('path');
-var File = require('gulp-util').File;
-var Buffer = require('buffer').Buffer;
+var File = require('vinyl');
 var fs = require('fs');
 require('mocha');
 

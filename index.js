@@ -5,82 +5,102 @@
 
 'use strict';
 
-var through = require('through');
-var gutil = require('gulp-util');
-var PluginError = gutil.PluginError;
-var File = gutil.File;
-var Buffer = require('buffer').Buffer;
-var fs = require('fs');
-var path = require('path');
+var File = require('vinyl');
+var PluginError = require('plugin-error');
+var Stats = require('stats-ctor');
+var through = require('through2');
 
+module.exports = function(filename, content, options) {
+	var files = [];
+	var before = options === true;
 
-function createFile(path, content) {
-    return new File({
-        path: path,
-        contents: new Buffer(content)
-    });
+	if (typeof filename === 'object') {
+		options = content;
+		content = null;
+		before = options === true || (options && options.before);
+
+		for (var file in filename) {
+			if (filename.hasOwnProperty(file)) {
+				var value = filename[file];
+
+				if (typeof value === 'object' && 'content' in value) {
+					content = value.content;
+					options = value;
+				} else {
+					content = value;
+					options = null;
+				}
+
+				files.push(createFile(file, content, options));
+			}
+		}
+	} else if (typeof filename === 'string') {
+		if (options && options.before) {
+			before = true;
+			delete options.before;
+		}
+
+		files.push(createFile(filename, content, options));
+	} else {
+		throw new PluginError('gulp-add', 'Unknown type of first argument: ' + typeof files);
+	}
+
+	return through.obj(function(file, enc, next) {
+		if (before) {
+			pushAll(this, files);
+			before = null;
+		}
+
+		next(null, file);
+	}, function(done) {
+		pushAll(this, files);
+		done(null);
+	});
+};
+
+function pushAll(stream, files) {
+	while (files.length > 0) {
+		stream.push(files.shift());
+	}
 }
 
+function createFile(path, content, options) {
+	var file = new File({
+		path: path
+	});
 
-module.exports = function(files, content, before) {
-    var oldFiles = [],
-        newFiles = [];
+	try {
+		file.contents = typeof content === 'string' ? Buffer.from(content) : content;
+	} catch (err) {
+		throw new PluginError('gulp-add', err);
+	}
 
-    if (typeof files === 'object') {
-        for (var file in files) {
-            if (files.hasOwnProperty(file)) {
-                newFiles.push(createFile(file, files[file]));
-            }
-        }
-        before = content;
-    } else if (typeof files === 'string') {
-        switch (typeof content) {
-            case 'string':
-                newFiles.push(createFile(files, content));
-                break;
+	if (typeof options !== 'object' || options === null) {
+		return file;
+	}
 
-            default:
-                throw new PluginError('gulp-add', 'Unknown argument type');
-        }
-    } else {
-        throw new PluginError('gulp-add', 'Unknown argument type');
-    }
+	if ('mode' in options) {
+		file.stat = new Stats(options.stat || null);
+		file.stat.mode = options.mode;
+	}
 
-    if ((before !== undefined) && (typeof before !== 'boolean')) {
-        throw new PluginError('gulp-add', '`before` argument should be boolean');
-    }
+	if ('stat' in options && !file.stat) {
+		file.stat = options.stat;
+	}
 
-    function bufferContents(file) {
-        if (file.isNull()) { return; }
-        if (file.isStream()) { return this.emit('error', new PluginError('gulp-add',  'Streaming not supported')); }
+	if (file.isBuffer() && file.stat) {
+		file.stat.size = file.contents.byteLength;
+	}
 
-        oldFiles.push(file);
-    }
+	for (var key in options) {
+		if (key === 'contents' || key === 'content' || key === 'stat' || key === 'mode') {
+			continue;
+		}
 
-    function endStream() {
-        try {
-            var i;
+		if (options.hasOwnProperty(key)) {
+			file[key] = options[key];
+		}
+	}
 
-            if (before) {
-                // Insert new files before old ones.
-                i = oldFiles;
-                oldFiles = newFiles;
-                newFiles = i;
-            }
-
-            for (i = 0; i < oldFiles.length; i++) {
-                this.emit('data', oldFiles[i]);
-            }
-
-            for (i = 0; i < newFiles.length; i++) {
-                this.emit('data', newFiles[i]);
-            }
-        } catch(e) {
-            return this.emit('error', new PluginError('gulp-add', e.message));
-        }
-
-        this.emit('end');
-    }
-
-    return through(bufferContents, endStream);
-};
+	return file;
+}
