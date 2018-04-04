@@ -9,6 +9,7 @@ require('mocha');
 describe('gulp-add', function() {
     describe('add()', function() {
         testAdd(
+            'push two new files at end of the stream',
             add({
                 'newfile1.txt': 'hello world1',
                 'newfile2.txt': 'ololo piu piu'
@@ -26,6 +27,7 @@ describe('gulp-add', function() {
         );
 
         testAdd(
+            'push one new file at the end of the stream',
             add('newfile1.txt', 'hello world2'),
             [
                 'test/oldfile1.txt',
@@ -39,13 +41,14 @@ describe('gulp-add', function() {
         );
 
         testAdd(
+            'single new file as a source stream',
             add('newfile1.txt', 'hello world3'),
             [],
             ['newfile1.txt', 'hello world3']
         );
 
-
         testAdd(
+            'push two new files at the front of the stream',
             add({
                 'newfile1.txt': 'hello world1',
                 'newfile2.txt': 'ololo piu piu'
@@ -63,6 +66,7 @@ describe('gulp-add', function() {
         );
 
         testAdd(
+            'push one new file at the front of the stream',
             add('newfile1.txt', 'hello world2', true),
             [
                 'test/oldfile1.txt',
@@ -76,14 +80,14 @@ describe('gulp-add', function() {
         );
 
         testAdd(
+            'single new file as a source stream',
             add('newfile1.txt', 'hello world3', true),
             [],
             ['newfile1.txt', 'hello world3']
         );
 
-
-        function testAdd(stream, files, results) {
-            it('should add files', function(done) {
+        function testAdd(name, stream, files, results) {
+            it(name, function(done) {
                 stream.on('data', function (file) {
                     var expectedFilename = results.shift(),
                         expectedHead = results.shift();
