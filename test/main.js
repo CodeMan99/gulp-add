@@ -201,6 +201,25 @@ describe('gulp-add', function() {
             ]
         );
 
+        testAdd(
+            'multiple files with their own mode',
+            add({
+                'mode1.txt': {
+                    mode: 0o664,
+                    content: 'read & write'
+                },
+                'mode2.txt': {
+                    mode: 0o775,
+                    content: 'read, write, & execute'
+                }
+            }),
+            [],
+            [
+                'mode1.txt', {mode: 0o664, size: Buffer.byteLength('read & write')},
+                'mode2.txt', {mode: 0o775, size: Buffer.byteLength('read, write, & execute')}
+            ]
+        );
+
         function testAdd(name, stream, files, results) {
             it(name, function(done) {
                 var checkDone = function() {
