@@ -8,8 +8,10 @@
     "license": "MIT",
     "main": "./index.js",
     "keywords": [
+        "gulp",
         "gulpplugin",
         "add",
+        "insert",
         "file",
         "content"
     ],
@@ -33,6 +35,6 @@
         "test": "mocha"
     },
     "engines": {
-        "node": ">=0.10"
+        "node": ">=4.0"
     }
 }
